@@ -1,0 +1,40 @@
+name: Package RedisMemoryCacheInvalidation
+
+on:
+  release:
+    types: [ published ]
+
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  Build:
+
+    runs-on: windows-2019
+    steps:
+    - name: Checkout Solution
+      uses: actions/checkout@v2
+      
+    - name: Setup Nuget
+      uses: nuget/setup-nuget@v1
+      with:
+        nuget-version: '5.x'
+
+    - name: Setup MSBuild
+      id: setup_msbuild
+      uses: microsoft/setup-msbuild@v1.0.2
+      
+    - name: Restore
+      run: nuget restore RedisMemoryCacheInvalidation.sln
+      
+    - name: Build
+      run: msbuild RedisMemoryCacheInvalidation.sln /p:Configuration=Release
+      
+    - name: Package
+      run: nuget pack RedisMemoryCacheInvalidation.nuspec /Properties version=${{ github.event.release.tag_name }}
+   
+    - name: Configure Nuget Sources
+      run: nuget sources add -Source https://nuget.pkg.github.com/clubspark-dotnet/index.json  -name clubspark-dotnet -username owner     -password ${{ secrets.GITHUB_TOKEN }}
+   
+    - name: Publish
+      run: nuget push RedisMemoryCacheInvalidation.${{ github.event.release.tag_name }}.nupkg -source clubspark-dotnet
